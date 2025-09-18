@@ -25,8 +25,8 @@ jobs:
         
     - name: Install required libraries
       run: |
-        arduino-cli lib install "ESPAsyncWebServer@3.8.1"
-        arduino-cli lib install "AsyncTCP@3.4.8"
+        arduino-cli lib install "ESP Async WebServer@3.8.1"
+        arduino-cli lib install "Async TCP@3.4.8"
         
     - name: Compile ESP32 sketch
       run: |
