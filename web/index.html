@@ -562,10 +562,12 @@
             try {
                 const data = JSON.parse(event.data);
                 if (data.type === 'position') {
-                    // Set initial pointer position
-                    setPointer(data.x, data.y);
-                    lastPointerX = data.x;
-                    lastPointerY = data.y;
+                    // Only update pointer position if not locally controlled
+                    if (!isLocallyControlled) {
+                        setPointer(data.x, data.y);
+                        lastPointerX = data.x;
+                        lastPointerY = data.y;
+                    }
                     return;
                 } else if (data.type === 'laser-state') {
                     // Update laser button state
@@ -748,6 +750,7 @@
         const box = document.getElementById('control-box');
         const pointer = document.getElementById('pointer');
         let isDragging = false;
+        let isLocallyControlled = false; // Flag to disable WebSocket position updates during local control
         let lastSendTime = 0;
         let sendThrottleMs = 40; // Set to 40ms for responsive control
 
@@ -807,19 +810,46 @@
             sendPointer(x, y);
         }
 
-        box.addEventListener('mousedown', e => { isDragging = true; handleBoxEvent(e); });
+        box.addEventListener('mousedown', e => { 
+            isDragging = true; 
+            isLocallyControlled = true;
+            handleBoxEvent(e); 
+        });
         box.addEventListener('mousemove', e => { if (isDragging) handleBoxEvent(e); });
-        box.addEventListener('mouseup', e => { isDragging = false; });
-        box.addEventListener('mouseleave', e => { isDragging = false; });
+        box.addEventListener('mouseup', e => { 
+            isDragging = false; 
+            // Clear local control flag after a short delay to avoid immediate position updates
+            setTimeout(() => { isLocallyControlled = false; }, 100);
+        });
+        box.addEventListener('mouseleave', e => { 
+            isDragging = false; 
+            // Clear local control flag after a short delay to avoid immediate position updates
+            setTimeout(() => { isLocallyControlled = false; }, 100);
+        });
 
-        box.addEventListener('touchstart', e => { isDragging = true; handleBoxEvent(e); });
+        box.addEventListener('touchstart', e => { 
+            isDragging = true; 
+            isLocallyControlled = true;
+            handleBoxEvent(e); 
+        });
         box.addEventListener('touchmove', e => { if (isDragging) handleBoxEvent(e); });
-        box.addEventListener('touchend', e => { isDragging = false; });
-        box.addEventListener('touchcancel', e => { isDragging = false; });
+        box.addEventListener('touchend', e => { 
+            isDragging = false; 
+            // Clear local control flag after a short delay to avoid immediate position updates
+            setTimeout(() => { isLocallyControlled = false; }, 100);
+        });
+        box.addEventListener('touchcancel', e => { 
+            isDragging = false; 
+            // Clear local control flag after a short delay to avoid immediate position updates
+            setTimeout(() => { isLocallyControlled = false; }, 100);
+        });
 
         // Fine control borders
         document.querySelectorAll('.fine-control').forEach(control => {
             control.addEventListener('click', (e) => {
+                // Set local control flag during fine control
+                isLocallyControlled = true;
+                
                 const axis = e.target.dataset.axis;
                 const direction = parseInt(e.target.dataset.direction);
                 const step = 0.02; // 2% step size
@@ -848,6 +878,9 @@
                 
                 lastPointerX = newX;
                 lastPointerY = newY;
+                
+                // Clear local control flag after a short delay
+                setTimeout(() => { isLocallyControlled = false; }, 100);
             });
         });
 
