@@ -399,3 +399,24 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# Arduino/ESP32 Build Artifacts
+build/
+*.bin
+*.elf
+*.map
+*.partitions.bin
+*.bootloader.bin
+*.merged.bin
+compile_commands.json
+build_opt.h
+build.options.json
+sdkconfig
+file_opts
+includes.cache
+libraries.cache
+partitions.csv
+preproc/
+sketch/
+core/
+libraries/
