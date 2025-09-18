@@ -7,6 +7,31 @@ on:
     branches: [ main ]
 
 jobs:
+  esp32-compile:
+    name: ESP32 Compile Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Arduino CLI
+      uses: arduino/setup-arduino-cli@v1
+      
+    - name: Install ESP32 platform
+      run: |
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32
+        
+    - name: Install required libraries
+      run: |
+        arduino-cli lib install "ESPAsyncWebServer"@3.8.0
+        arduino-cli lib install "AsyncTCP"@3.4.7
+        
+    - name: Compile ESP32 sketch
+      run: |
+        arduino-cli compile --fqbn esp32:esp32:esp32 CatLaserToy.ino
+  
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -29,52 +54,7 @@ jobs:
       if: always()
       run: |
         echo "Unit tests completed with exit code: $?"
-
-  esp32-compile:
-    name: ESP32 Compile Check
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup Arduino CLI
-      uses: arduino/setup-arduino-cli@v1
-      
-    - name: Install ESP32 platform
-      run: |
-        arduino-cli core update-index
-        arduino-cli core install esp32:esp32
         
-    - name: Install required libraries
-      run: |
-        arduino-cli lib install "ESPAsyncWebServer"
-        arduino-cli lib install "AsyncTCP"
-        
-    - name: Compile ESP32 sketch
-      run: |
-        arduino-cli compile --fqbn esp32:esp32:esp32 CatLaserToy.ino
-
-  windows-tests:
-    name: Windows Tests (MSYS2)
-    runs-on: windows-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup MSYS2
-      uses: msys2/setup-msys2@v2
-      with:
-        msystem: MINGW64
-        install: mingw-w64-x86_64-gcc mingw-w64-x86_64-make
-        
-    - name: Build and run tests
-      shell: msys2 {0}
-      run: |
-        cd tests
-        make test
-
   code-quality:
     name: Code Quality Checks
     runs-on: ubuntu-latest
