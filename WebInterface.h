@@ -36,6 +36,81 @@ const char index_html[] PROGMEM = R"rawliteral(
             border-radius: 20px;
             padding: 2rem;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        
+        /* Top right icon buttons */
+        .top-controls {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            display: flex;
+            gap: 1rem;
+            z-index: 20;
+        }
+        
+        .icon-btn {
+            width: 48px;
+            height: 48px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .icon-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .icon-btn:active {
+            transform: translateY(0);
+        }
+        
+        .icon-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s;
+        }
+        
+        .icon-btn:hover::before {
+            left: 100%;
+        }
+        
+        .laser-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .laser-btn.active {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            animation: pulse 2s infinite;
+        }
+        
+        .setup-btn {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 0.8;
+            }
+            50% {
+                opacity: 1;
+            }
         }
         
         h1 {
@@ -44,22 +119,6 @@ const char index_html[] PROGMEM = R"rawliteral(
             color: #2c3e50;
             font-size: 2rem;
             font-weight: 700;
-        }
-        
-        /* Network info banner */
-        .network-info {
-            margin-bottom: 1.5rem;
-            padding: 1rem;
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            border-radius: 12px;
-            font-size: 0.9rem;
-            text-align: center;
-        }
-        
-        .network-info a {
-            color: white;
-            text-decoration: underline;
         }
         
         /* Setup banner */
@@ -126,7 +185,7 @@ const char index_html[] PROGMEM = R"rawliteral(
             position: relative;
             display: flex;
             justify-content: center;
-            margin-bottom: 2rem;
+            margin-bottom: 0;
         }
         
         #control-box {
@@ -249,11 +308,11 @@ const char index_html[] PROGMEM = R"rawliteral(
         
         /* Pattern controls */
         .pattern-controls {
-            margin: 2rem 0;
-            padding: 2rem;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 20px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            box-shadow: none;
         }
         
         .pattern-controls h3 {
@@ -314,6 +373,83 @@ const char index_html[] PROGMEM = R"rawliteral(
             border: 2px solid rgba(102, 126, 234, 0.2);
         }
         
+        /* Tab navigation */
+        .tab-container {
+            margin: 2rem 0;
+        }
+        
+        .tab-navigation {
+            display: flex;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px 15px 0 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .tab-button {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 1.2rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #6c757d;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .tab-button.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .tab-button:not(.active):hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #495057;
+        }
+        
+        .tab-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .tab-button.active:hover::before {
+            left: 100%;
+        }
+        
+        .tab-content {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 0 0 20px 20px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
         /* Responsive design for larger screens */
         @media (min-width: 768px) {
             body {
@@ -322,6 +458,11 @@ const char index_html[] PROGMEM = R"rawliteral(
             
             .container {
                 padding: 3rem;
+            }
+            
+            .top-controls {
+                top: 3rem;
+                right: 3rem;
             }
             
             h1 {
@@ -350,58 +491,70 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
     <div class="container">
-        <h1>Cat Laser Toy Interface</h1>
-        
-        <div class="network-info">
-            <strong>Access this device:</strong> <a href="http://cattoy.local">http://cattoy.local</a> or <span id="ip-address">Loading IP...</span>
+        <!-- Top right controls -->
+        <div class="top-controls">
+            <button id="laser-btn" class="icon-btn laser-btn" title="Toggle Laser">●</button>
+            <button id="setup-btn" class="icon-btn setup-btn" title="Setup Mode">⚙</button>
         </div>
+        
+        <h1>Cat Laser Toy Interface</h1>
         
         <div id="setup-banner" style="display:none;">
             <span id="setup-text">Setup Mode: Position the laser at the TOP-LEFT corner, then click "Store Point".</span>
         </div>
         
-        <div class="control-buttons">
-            <button id="laser-btn" class="btn">Toggle Laser</button>
-            <button id="setup-btn" class="btn">Enter Setup Mode</button>
+        <div class="control-buttons" style="display:none;">
             <button id="store-btn" class="btn" style="display:none;">Store TOP-LEFT Point</button>
         </div>
         
-        <div class="pattern-controls">
-            <h3>Laser Patterns</h3>
-            <div class="pattern-buttons">
-                <button id="zigzag-btn" class="pattern-btn">Zigzag</button>
-                <button id="spiral-btn" class="pattern-btn">Spiral</button>
-                <button id="random-btn" class="pattern-btn">Random Walk</button>
-                <button id="figure8-btn" class="pattern-btn">Figure-8</button>
-                <button id="perimeter-btn" class="pattern-btn">Perimeter</button>
-                <button id="stop-btn" class="pattern-btn stop-btn">Stop</button>
+        <!-- Tab Container -->
+        <div class="tab-container">
+            <div class="tab-navigation">
+                <button class="tab-button active" data-tab="control">Control</button>
+                <button class="tab-button" data-tab="patterns">Patterns</button>
             </div>
-            <div class="pattern-status">
-                <span id="pattern-status">Ready to play</span>
+            
+            <!-- Control Tab Content -->
+            <div id="control-tab" class="tab-content active">
+                <div class="control-container">
+                    <div id="control-box">
+                        <div id="pointer"></div>
+                        <!-- Corner indicators -->
+                        <div class="corner-indicator tl" id="corner-tl">TL</div>
+                        <div class="corner-indicator tr" id="corner-tr">TR</div>
+                        <div class="corner-indicator br" id="corner-br">BR</div>
+                        <div class="corner-indicator bl" id="corner-bl">BL</div>
+                    </div>
+                    <!-- Fine control borders -->
+                    <div class="fine-control top" data-axis="y" data-direction="-1" title="Move Up"></div>
+                    <div class="fine-control bottom" data-axis="y" data-direction="1" title="Move Down"></div>
+                    <div class="fine-control left" data-axis="x" data-direction="-1" title="Move Left"></div>
+                    <div class="fine-control right" data-axis="x" data-direction="1" title="Move Right"></div>
+                </div>
+            </div>
+            
+            <!-- Patterns Tab Content -->
+            <div id="patterns-tab" class="tab-content">
+                <div class="pattern-controls">
+                    <h3>Laser Patterns</h3>
+                    <div class="pattern-buttons">
+                        <button id="zigzag-btn" class="pattern-btn">Zigzag</button>
+                        <button id="spiral-btn" class="pattern-btn">Spiral</button>
+                        <button id="random-btn" class="pattern-btn">Random Walk</button>
+                        <button id="figure8-btn" class="pattern-btn">Figure-8</button>
+                        <button id="perimeter-btn" class="pattern-btn">Perimeter</button>
+                        <button id="stop-btn" class="pattern-btn stop-btn">Stop</button>
+                    </div>
+                    <div class="pattern-status">
+                        <span id="pattern-status">Ready to play</span>
+                    </div>
+                </div>
             </div>
         </div>
-    
-    <div class="control-container">
-        <div id="control-box">
-            <div id="pointer"></div>
-            <!-- Corner indicators -->
-            <div class="corner-indicator tl active" id="corner-tl">TL</div>
-            <div class="corner-indicator tr" id="corner-tr">TR</div>
-            <div class="corner-indicator br" id="corner-br">BR</div>
-            <div class="corner-indicator bl" id="corner-bl">BL</div>
-        </div>
-        <!-- Fine control borders -->
-        <div class="fine-control top" data-axis="y" data-direction="-1" title="Move Up"></div>
-        <div class="fine-control bottom" data-axis="y" data-direction="1" title="Move Down"></div>
-        <div class="fine-control left" data-axis="x" data-direction="-1" title="Move Left"></div>
-        <div class="fine-control right" data-axis="x" data-direction="1" title="Move Right"></div>
-    </div>
     <script>
         let inSetupMode = false;
         let pointsStored = 0;
-        
-        // Display current IP address
-        document.getElementById('ip-address').textContent = `http://${location.hostname}:${location.port || 80}`;
+        let laserActive = false;
         
         const socket = new WebSocket(`ws://${location.host}/ws`);
         socket.onopen = () => {
@@ -433,14 +586,14 @@ const char index_html[] PROGMEM = R"rawliteral(
                 updateSetupUI();
                 showSetupElements();
                 document.getElementById('setup-banner').style.display = '';
+                document.querySelector('.control-buttons').style.display = 'flex';
                 document.getElementById('store-btn').style.display = '';
-                document.getElementById('setup-btn').style.display = 'none';
                 document.getElementById('store-btn').disabled = false;
             } else if (event.data === 'setup-done') {
                 inSetupMode = false;
                 document.getElementById('setup-banner').style.display = 'none';
+                document.querySelector('.control-buttons').style.display = 'none';
                 document.getElementById('store-btn').style.display = 'none';
-                document.getElementById('setup-btn').style.display = '';
                 hideSetupElements();
             } else if (event.data === 'pattern-complete') {
                 updatePatternStatus('Pattern completed');
@@ -465,7 +618,23 @@ const char index_html[] PROGMEM = R"rawliteral(
         const laserBtn = document.getElementById('laser-btn');
         laserBtn.onclick = () => {
             socket.send(JSON.stringify({ type: 'laser-toggle' }));
+            // Toggle the visual state immediately for responsiveness
+            laserActive = !laserActive;
+            updateLaserButton();
         };
+        
+        function updateLaserButton() {
+            const laserBtn = document.getElementById('laser-btn');
+            if (laserActive) {
+                laserBtn.classList.add('active');
+                laserBtn.textContent = '●'; // Solid circle for active
+                laserBtn.title = 'Turn Laser Off';
+            } else {
+                laserBtn.classList.remove('active');
+                laserBtn.textContent = '○'; // Empty circle for inactive
+                laserBtn.title = 'Turn Laser On';
+            }
+        }
 
         // Setup mode button
         const setupBtn = document.getElementById('setup-btn');
@@ -689,6 +858,22 @@ const char index_html[] PROGMEM = R"rawliteral(
         // Initialize UI
         updateSetupUI();
         setPatternButtonsState(true); // Enable pattern buttons initially
+        updateLaserButton(); // Initialize laser button state
+        
+        // Tab switching functionality
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const targetTab = e.target.dataset.tab;
+                
+                // Remove active class from all tabs and content
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                e.target.classList.add('active');
+                document.getElementById(targetTab + '-tab').classList.add('active');
+            });
+        });
     </script>
     </div>
 </body>

@@ -141,6 +141,52 @@ void performRandomPattern();
 void performFigure8Pattern();
 void performPerimeterPattern();
 
+// Helper function to enable laser before movement if not already enabled
+void enableLaserForMovement() {
+    if (!laserActive) {
+        laserActive = true;
+        laserStartTime = millis();
+        servoController.setLaser(true);
+        Serial.println("Laser auto-enabled for movement.");
+        
+        // Notify all WebSocket clients about laser state change
+        ws.textAll("{\"type\":\"laser-state\",\"active\":true}");
+    }
+}
+
+// Helper function to broadcast current laser position to all clients
+void broadcastCurrentPosition() {
+    Point currentPos = servoController.getCurrentPosition();
+    float x, y;
+    
+    if (inPointStorageMode) {
+        // In setup mode, use last pointer position
+        x = lastPointerX;
+        y = lastPointerY;
+    } else {
+        // In normal mode, convert current servo position back to normalized coordinates
+        if (storage.loadPoints(storedPoints)) {
+            // Try to reverse map from boundary to normalized coordinates (approximate)
+            x = (float)currentPos.x / 180.0;
+            y = (float)currentPos.y / 180.0;
+        } else {
+            // No boundary set, use direct servo mapping
+            x = (float)currentPos.x / 180.0;
+            y = (float)currentPos.y / 180.0;
+        }
+    }
+    
+    // Broadcast position to all clients
+    String positionMsg = "{\"type\":\"position\",\"x\":" + String(x, 3) + ",\"y\":" + String(y, 3) + "}";
+    ws.textAll(positionMsg);
+}
+
+// Helper function to broadcast laser state to all clients
+void broadcastLaserState() {
+    String laserMsg = "{\"type\":\"laser-state\",\"active\":" + String(laserActive ? "true" : "false") + "}";
+    ws.textAll(laserMsg);
+}
+
 // Helper to parse x/y from JSON string
 bool parseXYFromJson(const String& msg, float& x, float& y) {
     int xIdx = msg.indexOf("\"x\"");
@@ -196,6 +242,9 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                     if (typeVal == "move") {
                         float x, y;
                         if (parseXYFromJson(msg, x, y)) {
+                            // Enable laser automatically for movement
+                            enableLaserForMovement();
+                            
                             float y_swapped = 1.0f - y;
                             Point mapped;
                             if (storage.loadPoints(storedPoints)) {
@@ -208,6 +257,9 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                             motionExecutor.moveImmediate(mapped, laserActive);
                             lastPointerX = x;
                             lastPointerY = y_swapped;
+                            
+                            // Broadcast position update to all clients
+                            broadcastCurrentPosition();
                         }
                         return;
                     } else if (typeVal == "setup-move") {
@@ -218,6 +270,9 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                             servoController.moveTo(mapped);
                             lastPointerX = x;
                             lastPointerY = y_swapped;
+                            
+                            // Broadcast position update to all clients
+                            broadcastCurrentPosition();
                         }
                         return;
                     } else if (typeVal == "laser-toggle" || typeVal == "toggle-laser") {
@@ -226,7 +281,9 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                         if (laserActive) {
                             laserStartTime = millis();
                         }
-                        client->text("{\"laser\":" + String(laserActive ? "true" : "false") + "}");
+                        
+                        // Broadcast laser state to all clients
+                        broadcastLaserState();
                         return;
                     } else if (typeVal == "enter-setup") {
                         enterPointStorageMode();
@@ -246,16 +303,24 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                         }
                         return;
                     } else if (typeVal == "move-up") {
+                        enableLaserForMovement();
                         servoController.adjustY(-2);
+                        broadcastCurrentPosition();
                         return;
                     } else if (typeVal == "move-down") {
+                        enableLaserForMovement();
                         servoController.adjustY(2);
+                        broadcastCurrentPosition();
                         return;
                     } else if (typeVal == "move-left") {
+                        enableLaserForMovement();
                         servoController.adjustX(-2);
+                        broadcastCurrentPosition();
                         return;
                     } else if (typeVal == "move-right") {
+                        enableLaserForMovement();
                         servoController.adjustX(2);
+                        broadcastCurrentPosition();
                         return;
                     } else if (typeVal == "stop-motion") {
                         motionExecutor.stop();
@@ -296,6 +361,9 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                             return;
                         }
                         if (pattern) {
+                            // Enable laser automatically for pattern movement
+                            enableLaserForMovement();
+                            
                             MotionCommand commands[200];
                             MotionConfig config;
                             config.pointDuration_ms = 50;
@@ -358,6 +426,10 @@ void notifySetupMode(AsyncWebSocketClient *client) {
     
     // Send current position
     sendCurrentPosition(client);
+    
+    // Send current laser state
+    String laserMsg = "{\"type\":\"laser-state\",\"active\":" + String(laserActive ? "true" : "false") + "}";
+    client->text(laserMsg);
 
     // Initial status report
     Serial.println("System initialized.");
@@ -365,6 +437,8 @@ void notifySetupMode(AsyncWebSocketClient *client) {
     Serial.println(currentX);
     Serial.print("Current Y: ");
     Serial.println(currentY);
+    Serial.print("Laser Active: ");
+    Serial.println(laserActive ? "true" : "false");
 }
 
 void loop() {
@@ -399,18 +473,24 @@ void loop() {
                 Serial.println("Laser deactivated.");
                 servoController.setLaser(false); // Turn off laser immediately
             }
+            
+            // Broadcast laser state change to all clients
+            broadcastLaserState();
         }
     }
 
-    // Auto-disable laser after 5 minutes if active
+    // Auto-disable laser after 30 seconds if active
     if (laserActive) {
         servoController.setLaser(true); // Turn on laser
         
-        // Auto-disable after 5 minutes (300,000 ms)
-        if (millis() - laserStartTime > 300000) {
+        // Auto-disable after 30 seconds (30,000 ms)
+        if (millis() - laserStartTime > 30000) {
             laserActive = false;
             servoController.setLaser(false); // Turn off laser
             Serial.println("Laser auto-disabled after timeout.");
+            
+            // Broadcast laser state change to all clients
+            broadcastLaserState();
         }
     } else {
         servoController.setLaser(false); // Turn off laser

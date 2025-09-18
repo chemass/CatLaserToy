@@ -63,6 +63,17 @@ bool inPointStorageMode = false;
 unsigned long lastLedToggleTime = 0;
 bool ledState = false;
 
+#line 64 "C:\\Users\\utscs\\source\\repos\\CatLaserToy\\CatLaserToy.ino"
+void setup();
+#line 145 "C:\\Users\\utscs\\source\\repos\\CatLaserToy\\CatLaserToy.ino"
+bool parseXYFromJson(const String& msg, float& x, float& y);
+#line 165 "C:\\Users\\utscs\\source\\repos\\CatLaserToy\\CatLaserToy.ino"
+void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len);
+#line 370 "C:\\Users\\utscs\\source\\repos\\CatLaserToy\\CatLaserToy.ino"
+void loop();
+#line 433 "C:\\Users\\utscs\\source\\repos\\CatLaserToy\\CatLaserToy.ino"
+void mapPointToSquare(float u, float v, Point* result);
+#line 64 "C:\\Users\\utscs\\source\\repos\\CatLaserToy\\CatLaserToy.ino"
 void setup() {
     // Initialize serial communication
     Serial.begin(115200);  
