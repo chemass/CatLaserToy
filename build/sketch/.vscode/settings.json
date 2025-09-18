@@ -1,7 +1,0 @@
-#line 1 "C:\\Users\\utscs\\source\\repos\\CatLaserToy\\.vscode\\settings.json"
-{
-    "files.associations": {
-        "*.embeddedhtml": "html",
-        "esp32-hal-ledc.h": "c"
-    }
-}
