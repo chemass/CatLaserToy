@@ -1,0 +1,41 @@
+# Testing Configuration
+# This file can be used by IDEs and development tools for test configuration
+
+[test]
+framework = "doctest"
+language = "cpp"
+standard = "c++11"
+
+# Test directories
+test_dir = "tests"
+source_dir = ".."
+
+# Compiler settings
+compiler = "g++"
+flags = ["-std=c++11", "-Wall", "-Wextra", "-O2", "-g"]
+includes = ["-I.", "-I.."]
+
+# Test suites
+[test.suites.geometry]
+sources = ["../Geometry.cpp", "test_geometry.cpp"]
+executable = "test_geometry"
+
+[test.suites.patterns]  
+sources = ["../PatternGenerator.cpp", "test_patterns.cpp"]
+executable = "test_patterns"
+
+[test.suites.motion]
+sources = ["../MotionPlanner.cpp", "../MotionExecutor.cpp", "test_motion_system.cpp"]
+executable = "test_motion_system"
+
+# Coverage settings
+[coverage]
+enabled = true
+tool = "gcov"
+min_coverage = 85
+
+# Memory analysis
+[memory]
+tool = "valgrind"
+check_leaks = true
+check_bounds = true

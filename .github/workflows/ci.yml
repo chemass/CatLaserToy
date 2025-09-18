@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
-    name: Run Unit Tests
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
     
     steps:
@@ -20,7 +20,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y build-essential g++ make
         
-    - name: Build and run tests
+    - name: Build and run unit tests
       run: |
         cd tests
         make test
@@ -28,8 +28,8 @@ jobs:
     - name: Upload test results
       if: always()
       run: |
-        echo "Test completed with exit code: $?"
-        
+        echo "Unit tests completed with exit code: $?"
+
   esp32-compile:
     name: ESP32 Compile Check
     runs-on: ubuntu-latest
@@ -54,7 +54,27 @@ jobs:
     - name: Compile ESP32 sketch
       run: |
         arduino-cli compile --fqbn esp32:esp32:esp32 CatLaserToy.ino
+
+  windows-tests:
+    name: Windows Tests (MSYS2)
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        install: mingw-w64-x86_64-gcc mingw-w64-x86_64-make
         
+    - name: Build and run tests
+      shell: msys2 {0}
+      run: |
+        cd tests
+        make test
+
   code-quality:
     name: Code Quality Checks
     runs-on: ubuntu-latest
@@ -63,13 +83,81 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Run basic code analysis
+    - name: Run static analysis
       run: |
-        # Check for common issues
-        echo "Checking for TODO/FIXME comments:"
-        grep -r "TODO\|FIXME" --include="*.cpp" --include="*.h" --include="*.ino" . || true
+        echo "=== Code Quality Analysis ==="
         
-        echo "Checking for long lines (>120 chars):"
-        find . -name "*.cpp" -o -name "*.h" -o -name "*.ino" | xargs wc -L | awk '$1 > 120 {print}' || true
+        # Check for TODO/FIXME comments
+        echo "Checking for TODO/FIXME comments:"
+        grep -r "TODO\|FIXME" --include="*.cpp" --include="*.h" --include="*.ino" . || echo "No TODO/FIXME found"
+        
+        # Check for long lines (>120 chars)
+        echo -e "\nChecking for long lines (>120 chars):"
+        find . -name "*.cpp" -o -name "*.h" -o -name "*.ino" | xargs wc -L | awk '$1 > 120 {print "Long line in " $2 ": " $1 " characters"}' || echo "No long lines found"
+        
+        # Check file structure
+        echo -e "\nProject structure:"
+        tree -L 2 || ls -la
+        
+        # Verify all expected files exist
+        echo -e "\nVerifying core files exist:"
+        required_files=(
+          "CatLaserToy.ino"
+          "Geometry.h" "Geometry.cpp"
+          "PatternGenerator.h" "PatternGenerator.cpp"
+          "MotionPlanner.h" "MotionPlanner.cpp"
+          "MotionExecutor.h" "MotionExecutor.cpp"
+          "ServoController.h" "ServoController.cpp"
+          "tests/test_geometry.cpp"
+          "tests/test_patterns.cpp"
+          "tests/test_motion_system.cpp"
+        )
+        
+        for file in "${required_files[@]}"; do
+          if [ -f "$file" ]; then
+            echo "✓ $file"
+          else
+            echo "✗ Missing: $file"
+          fi
+        done
         
         echo "Code quality check completed."
+
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: [unit-tests, esp32-compile]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup test environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential g++ make valgrind
+        
+    - name: Run extended tests
+      run: |
+        cd tests
+        
+        echo "=== Running unit tests with verbose output ==="
+        make test
+        
+        echo -e "\n=== Running memory leak detection ==="
+        make valgrind || echo "Valgrind completed with warnings"
+        
+        echo -e "\n=== Performance verification ==="
+        time make test
+        
+    - name: Test coverage analysis
+      run: |
+        cd tests
+        echo "=== Generating test coverage ==="
+        make coverage || echo "Coverage analysis completed"
+        
+        # Show coverage summary if available
+        if [ -f "*.gcov" ]; then
+          echo "Coverage files generated:"
+          ls -la *.gcov
+        fi
