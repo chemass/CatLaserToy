@@ -25,8 +25,8 @@ jobs:
         
     - name: Install required libraries
       run: |
-        arduino-cli lib install "ESPAsyncWebServer"@3.8.0
-        arduino-cli lib install "AsyncTCP"@3.4.7
+        arduino-cli lib install "ESPAsyncWebServer"
+        arduino-cli lib install "AsyncTCP"
         
     - name: Compile ESP32 sketch
       run: |
@@ -54,7 +54,7 @@ jobs:
       if: always()
       run: |
         echo "Unit tests completed with exit code: $?"
-        
+
   code-quality:
     name: Code Quality Checks
     runs-on: ubuntu-latest
