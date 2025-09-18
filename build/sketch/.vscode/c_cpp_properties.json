@@ -9,8 +9,8 @@
             "intelliSenseMode": "windows-gcc-x64",
             "includePath": [
                 "${workspaceFolder}/**",
-                "C:/Users/utscs/AppData/Local/Arduino15/packages/esp32/**",
-                "C:/Users/utscs/OneDrive/Documents/Arduino/libraries/**"
+                "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\**",
+                "C:\\Users\\utscs\\OneDrive\\Documents\\Arduino\\libraries\\**"
             ],
             "forcedInclude": [
                 "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0\\cores\\esp32\\Arduino.h"
@@ -39,6 +39,13 @@
                 "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\tools\\esp32-arduino-libs\\idf-release_v5.4-2f7dcd86-v1\\esp32\\qio_qspi\\include",
                 "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0\\cores\\esp32",
                 "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0\\variants\\esp32",
+                "C:\\Users\\utscs\\OneDrive\\Documents\\Arduino\\libraries\\AsyncTCP\\src",
+                "C:\\Users\\utscs\\OneDrive\\Documents\\Arduino\\libraries\\ESPAsyncWebServer\\src",
+                "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0\\libraries\\FS\\src",
+                "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0\\libraries\\ESPmDNS\\src",
+                "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0\\libraries\\EEPROM\\src",
+                "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0\\libraries\\WiFi\\src",
+                "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\3.2.0\\libraries\\Network\\src",
                 "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\tools\\esp-x32\\2411\\xtensa-esp-elf\\include\\c++\\14.2.0",
                 "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\tools\\esp-x32\\2411\\xtensa-esp-elf\\include\\c++\\14.2.0\\xtensa-esp-elf\\esp32",
                 "C:\\Users\\utscs\\AppData\\Local\\Arduino15\\packages\\esp32\\tools\\esp-x32\\2411\\xtensa-esp-elf\\include\\c++\\14.2.0\\backward",

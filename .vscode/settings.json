@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.embeddedhtml": "html",
+        "esp32-hal-ledc.h": "c"
+    }
+}

@@ -1,0 +1,75 @@
+name: Cat Laser Toy CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup C++ environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential g++ make
+        
+    - name: Build and run tests
+      run: |
+        cd tests
+        make test
+        
+    - name: Upload test results
+      if: always()
+      run: |
+        echo "Test completed with exit code: $?"
+        
+  esp32-compile:
+    name: ESP32 Compile Check
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Arduino CLI
+      uses: arduino/setup-arduino-cli@v1
+      
+    - name: Install ESP32 platform
+      run: |
+        arduino-cli core update-index
+        arduino-cli core install esp32:esp32
+        
+    - name: Install required libraries
+      run: |
+        arduino-cli lib install "ESPAsyncWebServer"
+        arduino-cli lib install "AsyncTCP"
+        
+    - name: Compile ESP32 sketch
+      run: |
+        arduino-cli compile --fqbn esp32:esp32:esp32 CatLaserToy.ino
+        
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run basic code analysis
+      run: |
+        # Check for common issues
+        echo "Checking for TODO/FIXME comments:"
+        grep -r "TODO\|FIXME" --include="*.cpp" --include="*.h" --include="*.ino" . || true
+        
+        echo "Checking for long lines (>120 chars):"
+        find . -name "*.cpp" -o -name "*.h" -o -name "*.ino" | xargs wc -L | awk '$1 > 120 {print}' || true
+        
+        echo "Code quality check completed."
