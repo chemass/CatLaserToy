@@ -574,6 +574,11 @@ const char index_html[] PROGMEM = R"rawliteral(
                     lastPointerX = data.x;
                     lastPointerY = data.y;
                     return;
+                } else if (data.type === 'laser-state') {
+                    // Update laser button state
+                    laserActive = data.active;
+                    updateLaserButton();
+                    return;
                 }
             } catch (e) {
                 // Handle non-JSON messages (legacy format)
@@ -618,9 +623,7 @@ const char index_html[] PROGMEM = R"rawliteral(
         const laserBtn = document.getElementById('laser-btn');
         laserBtn.onclick = () => {
             socket.send(JSON.stringify({ type: 'laser-toggle' }));
-            // Toggle the visual state immediately for responsiveness
-            laserActive = !laserActive;
-            updateLaserButton();
+            // Don't update state locally - wait for server response
         };
         
         function updateLaserButton() {
