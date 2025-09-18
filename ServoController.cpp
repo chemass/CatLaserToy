@@ -3,6 +3,33 @@
 #include <Arduino.h>
 #endif
 
+// Mock Arduino functions for testing
+#ifndef ARDUINO
+void delay(int ms) {
+    // No-op for testing
+}
+
+void pinMode(int pin, int mode) {
+    // No-op for testing
+}
+
+void digitalWrite(int pin, int value) {
+    // No-op for testing
+}
+
+void ledcAttachChannel(int pin, int freq, int res, int channel) {
+    // No-op for testing
+}
+
+void ledcWriteChannel(int channel, int duty) {
+    // No-op for testing
+}
+
+long map(long x, long in_min, long in_max, long out_min, long out_max) {
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+}
+#endif
+
 ServoController::ServoController(int xPin, int yPin, int laserPin) 
     : servoXPin(xPin), servoYPin(yPin), laserPin(laserPin),
       servoXChannel(0), servoYChannel(1),

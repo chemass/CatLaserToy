@@ -9,8 +9,17 @@ struct MotionCommand {
     unsigned long duration_ms;
     bool laser_on;
     
+    // Computed properties that read from target
+    float targetX() const { return target.x; }
+    float targetY() const { return target.y; }
+    
+    // Setters that update target
+    void targetX(float value) { target.x = value; }
+    void targetY(float value) { target.y = value; }
+    
     MotionCommand() : target(), duration_ms(50), laser_on(false) {}
-    MotionCommand(Point t, unsigned long d, bool l) : target(t), duration_ms(d), laser_on(l) {}
+    MotionCommand(Point targetPoint, unsigned long durationMs, bool laserOn) : target(targetPoint), duration_ms(durationMs), laser_on(laserOn) {}
+    MotionCommand(float x, float y, unsigned long durationMs, bool laserOn) : target(x, y), duration_ms(durationMs), laser_on(laserOn) {}
 };
 
 // Configuration for motion sequences

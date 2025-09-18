@@ -1,7 +1,9 @@
 {
     "files.associations": {
         "*.embeddedhtml": "html",
-        "esp32-hal-ledc.h": "c"
+        "esp32-hal-ledc.h": "c",
+        "chrono": "cpp",
+        "functional": "cpp"
     },
     "makefile.makefilePath": "/tests/Makefile"
 }

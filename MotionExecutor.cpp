@@ -3,6 +3,17 @@
 #include <Arduino.h>
 #endif
 
+// Mock Arduino functions for testing
+#ifndef ARDUINO
+unsigned long millis() {
+    static unsigned long mock_time = 0;
+    return mock_time += 10; // Increment by 10ms each call for testing
+}
+#endif
+
+// Define static const member
+const int MotionExecutor::MAX_QUEUE_SIZE;
+
 MotionExecutor::MotionExecutor(ServoController& controller) 
     : servoController(controller), queueHead(0), queueTail(0), queueSize(0),
       commandStartTime(0), executing(false) {
@@ -13,10 +24,12 @@ void MotionExecutor::queueCommands(const MotionCommand* commands, int commandCou
         enqueue(commands[i]);
     }
     
+#ifdef ARDUINO
     Serial.print("Queued ");
     Serial.print(commandCount);
     Serial.print(" commands. Queue size: ");
     Serial.println(queueSize);
+#endif
 }
 
 bool MotionExecutor::executeNext() {
@@ -24,7 +37,9 @@ bool MotionExecutor::executeNext() {
     if (executing) {
         if (isCommandComplete()) {
             executing = false;
+#ifdef ARDUINO
             Serial.println("Command completed");
+#endif
         } else {
             return true; // Still executing
         }
@@ -48,26 +63,32 @@ void MotionExecutor::moveImmediate(const Point& target, bool laserOn) {
     servoController.moveTo(target);
     servoController.setLaser(laserOn);
     
+#ifdef ARDUINO
     Serial.print("Immediate move to X: ");
     Serial.print(target.x);
     Serial.print(", Y: ");
     Serial.print(target.y);
     Serial.print(", Laser: ");
     Serial.println(laserOn ? "ON" : "OFF");
+#endif
 }
 
 void MotionExecutor::clearQueue() {
     queueHead = 0;
     queueTail = 0;
     queueSize = 0;
+#ifdef ARDUINO
     Serial.println("Motion queue cleared");
+#endif
 }
 
 void MotionExecutor::stop() {
     executing = false;
     clearQueue();
     servoController.setLaser(false); // Turn off laser for safety
+#ifdef ARDUINO
     Serial.println("Motion executor stopped");
+#endif
 }
 
 void MotionExecutor::startCommand(const MotionCommand& cmd) {
@@ -79,6 +100,7 @@ void MotionExecutor::startCommand(const MotionCommand& cmd) {
     servoController.moveTo(cmd.target);
     servoController.setLaser(cmd.laser_on);
     
+#ifdef ARDUINO
     Serial.print("Executing command: X=");
     Serial.print(cmd.target.x);
     Serial.print(", Y=");
@@ -87,6 +109,7 @@ void MotionExecutor::startCommand(const MotionCommand& cmd) {
     Serial.print(cmd.duration_ms);
     Serial.print("ms, Laser=");
     Serial.println(cmd.laser_on ? "ON" : "OFF");
+#endif
 }
 
 bool MotionExecutor::isCommandComplete() {
@@ -99,7 +122,9 @@ void MotionExecutor::enqueue(const MotionCommand& cmd) {
         queueTail = (queueTail + 1) % MAX_QUEUE_SIZE;
         queueSize++;
     } else {
+#ifdef ARDUINO
         Serial.println("Warning: Motion queue is full, command dropped");
+#endif
     }
 }
 
