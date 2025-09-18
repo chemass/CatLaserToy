@@ -2,7 +2,10 @@
 #define SERVO_CONTROLLER_H
 
 #include "Geometry.h"
+
+#ifdef ARDUINO
 #include "esp32-hal-ledc.h"
+#endif
 
 class ServoController {
 public:

@@ -1,11 +1,10 @@
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 #include "MockServoController.h"
 
 // Include source files for testing
 #include "../MotionPlanner.h"
-#include "../MotionPlanner.cpp"
 #include "../MotionExecutor.h"
-#include "../MotionExecutor.cpp"
 
 TEST_CASE("MotionPlanner boundary setup and validation") {
     MotionPlanner planner;

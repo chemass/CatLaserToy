@@ -1,5 +1,7 @@
 #include "ServoController.h"
+#ifdef ARDUINO
 #include <Arduino.h>
+#endif
 
 ServoController::ServoController(int xPin, int yPin, int laserPin) 
     : servoXPin(xPin), servoYPin(yPin), laserPin(laserPin),
@@ -9,6 +11,7 @@ ServoController::ServoController(int xPin, int yPin, int laserPin)
 }
 
 void ServoController::begin() {
+#ifdef ARDUINO
     // Set laser pin as output
     pinMode(laserPin, OUTPUT);
     digitalWrite(laserPin, HIGH); // Laser off by default (inverted logic)
@@ -25,6 +28,7 @@ void ServoController::begin() {
     Serial.print(currentPosition.x);
     Serial.print(", Y: ");
     Serial.println(currentPosition.y);
+#endif
 }
 
 void ServoController::moveTo(const Point& position) {
@@ -33,17 +37,21 @@ void ServoController::moveTo(const Point& position) {
     constrainedPos.x = constrainToLimits(position.x, minLimits.x, maxLimits.x);
     constrainedPos.y = constrainToLimits(position.y, minLimits.y, maxLimits.y);
     
+#ifdef ARDUINO
     // Move servos
     moveServo(servoXChannel, constrainedPos.x);
     moveServo(servoYChannel, constrainedPos.y);
+#endif
     
     // Update current position
     updateCurrentPosition(constrainedPos);
 }
 
 void ServoController::setLaser(bool enabled) {
+#ifdef ARDUINO
     // Note: Inverted logic - HIGH = OFF, LOW = ON
     digitalWrite(laserPin, enabled ? LOW : HIGH);
+#endif
 }
 
 void ServoController::setLimits(int xMin, int xMax, int yMin, int yMax) {
@@ -52,6 +60,7 @@ void ServoController::setLimits(int xMin, int xMax, int yMin, int yMax) {
     maxLimits.x = xMax;
     maxLimits.y = yMax;
     
+#ifdef ARDUINO
     Serial.print("Servo limits set - X: ");
     Serial.print(xMin);
     Serial.print("-");
@@ -60,9 +69,11 @@ void ServoController::setLimits(int xMin, int xMax, int yMin, int yMax) {
     Serial.print(yMin);
     Serial.print("-");
     Serial.println(yMax);
+#endif
 }
 
 void ServoController::calibrate() {
+#ifdef ARDUINO
     Serial.println("Starting servo calibration...");
     
     // Move to corners to verify range
@@ -90,6 +101,7 @@ void ServoController::calibrate() {
     moveTo(center);
     
     Serial.println("Calibration complete");
+#endif
 }
 
 void ServoController::adjustX(int delta) {
@@ -105,9 +117,11 @@ void ServoController::adjustY(int delta) {
 }
 
 void ServoController::moveServo(int channel, int angle) {
+#ifdef ARDUINO
     angle = constrainToLimits(angle, 0, 180); // Constrain angle to valid servo range
     int dutyCycle = map(angle, 0, 180, pwmMinDuty, pwmMaxDuty);
     ledcWriteChannel(channel, dutyCycle);
+#endif
 }
 
 int ServoController::constrainToLimits(int value, int min, int max) {

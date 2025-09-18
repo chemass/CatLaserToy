@@ -1,5 +1,7 @@
 #include "MotionExecutor.h"
+#ifdef ARDUINO
 #include <Arduino.h>
+#endif
 
 MotionExecutor::MotionExecutor(ServoController& controller) 
     : servoController(controller), queueHead(0), queueTail(0), queueSize(0),

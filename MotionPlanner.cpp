@@ -1,6 +1,8 @@
 #include "MotionPlanner.h"
 #include "ServoController.h"
+#ifdef ARDUINO
 #include <Arduino.h>
+#endif
 #include <cstring>
 
 // MotionSequence implementation

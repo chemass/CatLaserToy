@@ -3,7 +3,6 @@
 
 // Include source files directly for testing (no Arduino dependencies)
 #include "../Geometry.h"
-#include "../Geometry.cpp"
 
 TEST_CASE("Point construction and basic operations") {
     // Test default constructor

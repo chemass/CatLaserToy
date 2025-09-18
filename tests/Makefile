@@ -8,19 +8,24 @@ INCLUDES = -I. -I..
 LDFLAGS = 
 
 # Source files
+BASIC_SOURCES = test_basic.cpp
 GEOMETRY_SOURCES = ../Geometry.cpp test_geometry.cpp
-PATTERN_SOURCES = ../PatternGenerator.cpp test_patterns.cpp  
-MOTION_SOURCES = ../MotionPlanner.cpp ../MotionExecutor.cpp test_motion_system.cpp
+PATTERN_SOURCES = ../Geometry.cpp ../PatternGenerator.cpp test_patterns.cpp  
+MOTION_SOURCES = ../Geometry.cpp ../MotionPlanner.cpp ../MotionExecutor.cpp test_motion_system.cpp
 
 # Test executables
+BASIC_TEST = test_basic
 GEOMETRY_TEST = test_geometry
 PATTERN_TEST = test_patterns
 MOTION_TEST = test_motion_system
 
 # Default target
-all: $(GEOMETRY_TEST) $(PATTERN_TEST) $(MOTION_TEST)
+all: $(BASIC_TEST) $(GEOMETRY_TEST) $(PATTERN_TEST) $(MOTION_TEST)
 
 # Individual test targets
+$(BASIC_TEST): $(BASIC_SOURCES) doctest.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(BASIC_SOURCES) $(LDFLAGS)
+
 $(GEOMETRY_TEST): $(GEOMETRY_SOURCES) doctest.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(GEOMETRY_SOURCES) $(LDFLAGS)
 
@@ -32,7 +37,9 @@ $(MOTION_TEST): $(MOTION_SOURCES) doctest.h MockServoController.h
 
 # Run all tests
 test: all
-	@echo "Running Geometry Tests..."
+	@echo "Running Basic Tests..."
+	./$(BASIC_TEST)
+	@echo "\nRunning Geometry Tests..."
 	./$(GEOMETRY_TEST)
 	@echo "\nRunning Pattern Tests..."
 	./$(PATTERN_TEST)
@@ -41,6 +48,9 @@ test: all
 	@echo "\nAll tests completed!"
 
 # Individual test runs
+test-basic: $(BASIC_TEST)
+	./$(BASIC_TEST)
+
 test-geometry: $(GEOMETRY_TEST)
 	./$(GEOMETRY_TEST)
 
@@ -52,11 +62,12 @@ test-motion: $(MOTION_TEST)
 
 # Clean build artifacts
 clean:
-	rm -f $(GEOMETRY_TEST) $(PATTERN_TEST) $(MOTION_TEST)
+	rm -f $(BASIC_TEST) $(GEOMETRY_TEST) $(PATTERN_TEST) $(MOTION_TEST)
 	rm -f *.o *.exe
 
 # Memory leak detection (Linux only)
 valgrind: all
+	valgrind --leak-check=full --show-leak-kinds=all ./$(BASIC_TEST)
 	valgrind --leak-check=full --show-leak-kinds=all ./$(GEOMETRY_TEST)
 	valgrind --leak-check=full --show-leak-kinds=all ./$(PATTERN_TEST)
 	valgrind --leak-check=full --show-leak-kinds=all ./$(MOTION_TEST)
@@ -65,10 +76,11 @@ valgrind: all
 coverage: CXXFLAGS += --coverage
 coverage: LDFLAGS += --coverage
 coverage: all
+	./$(BASIC_TEST)
 	./$(GEOMETRY_TEST)
 	./$(PATTERN_TEST)
 	./$(MOTION_TEST)
-	gcov $(GEOMETRY_SOURCES) $(PATTERN_SOURCES) $(MOTION_SOURCES)
+	gcov $(BASIC_SOURCES) $(GEOMETRY_SOURCES) $(PATTERN_SOURCES) $(MOTION_SOURCES)
 
 # Performance profiling (requires gprof)
 profile: CXXFLAGS += -pg
@@ -101,6 +113,7 @@ help:
 # Windows-specific adjustments
 ifeq ($(OS),Windows_NT)
     # Windows uses .exe extension
+    BASIC_TEST := $(BASIC_TEST).exe
     GEOMETRY_TEST := $(GEOMETRY_TEST).exe
     PATTERN_TEST := $(PATTERN_TEST).exe
     MOTION_TEST := $(MOTION_TEST).exe
