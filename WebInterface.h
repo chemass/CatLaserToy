@@ -370,6 +370,146 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             font-weight: 600;
             color: #2c3e50;
             border: 2px solid rgba(102, 126, 234, 0.2);
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Queue controls */
+        .queue-controls {
+            margin-top: 2rem;
+        }
+        
+        .queue-controls h4 {
+            margin-bottom: 1rem;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+        
+        .queue-mode-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+        
+        .queue-mode-btn {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(243, 156, 18, 0.3);
+        }
+        
+        .queue-mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(243, 156, 18, 0.4);
+        }
+        
+        .queue-mode-btn.active {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+        
+        .queue-mode-btn.active:hover {
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+        }
+        
+        .queue-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .queue-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            color: white;
+            border: none;
+            padding: 0.8rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+        }
+        
+        .queue-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(155, 89, 182, 0.4);
+        }
+        
+        .queue-btn:disabled {
+            background: linear-gradient(135deg, #bdc3c7, #95a5a6);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .queue-status {
+            text-align: center;
+            padding: 0.8rem;
+            background: rgba(155, 89, 182, 0.1);
+            border-radius: 10px;
+            font-weight: 500;
+            color: #663399;
+            border: 1px solid rgba(155, 89, 182, 0.2);
+            margin-bottom: 1rem;
+        }
+        
+        .queue-list {
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 1rem;
+            min-height: 60px;
+            border: 1px solid rgba(155, 89, 182, 0.2);
+        }
+        
+        .queue-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.5rem;
+            margin: 0.3rem 0;
+            background: rgba(155, 89, 182, 0.1);
+            border-radius: 8px;
+            border-left: 4px solid #9b59b6;
+        }
+        
+        .queue-item.executing {
+            background: rgba(52, 152, 219, 0.2);
+            border-left-color: #3498db;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .queue-item-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+        
+        .queue-item-add {
+            background: rgba(46, 204, 113, 0.8);
+            color: white;
+            border: none;
+            padding: 0.3rem 0.8rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .queue-item-add:hover {
+            background: rgba(39, 174, 96, 0.9);
+            transform: scale(1.05);
         }
         
         /* Tab navigation */
@@ -547,6 +687,22 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                     <div class="pattern-status">
                         <span id="pattern-status">Ready to play</span>
                     </div>
+                    
+                    <!-- Pattern Queue Section -->
+                    <div class="queue-controls">
+                        <h4>Pattern Queue</h4>
+                        <div class="queue-mode-toggle">
+                            <button id="queue-mode-btn" class="queue-mode-btn">Queue Mode: OFF</button>
+                        </div>
+                        <div class="queue-buttons">
+                            <button id="execute-queue-btn" class="queue-btn" disabled>Execute Queue</button>
+                            <button id="clear-queue-btn" class="queue-btn">Clear Queue</button>
+                        </div>
+                        <div class="queue-status">
+                            <span id="queue-status">Queue is empty</span>
+                        </div>
+                        <div class="queue-list" id="queue-list"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -554,6 +710,7 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         let inSetupMode = false;
         let pointsStored = 0;
         let laserActive = false;
+        let queueMode = false; // Track if we're in queue mode
         
         const socket = new WebSocket(`ws://${location.host}/ws`);
         socket.onopen = () => {
@@ -607,6 +764,43 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
             } else if (event.data === 'pattern-stopped') {
                 updatePatternStatus('Pattern stopped');
                 setPatternButtonsState(true);
+            } else if (event.data === 'queue-complete') {
+                updatePatternStatus('Queue completed');
+                setPatternButtonsState(true);
+                updateQueueStatus('Queue is empty');
+                clearQueueDisplay();
+            }
+            
+            // Handle queue-related JSON messages
+            try {
+                const data = JSON.parse(event.data);
+                if (data['queue-added']) {
+                    updatePatternStatus('Pattern added to queue');
+                    if (data['queue-status']) {
+                        parseAndDisplayQueueStatus(data['queue-status']);
+                    } else {
+                        updateQueueDisplay();
+                    }
+                } else if (data['queue-started']) {
+                    updatePatternStatus('Executing queue...');
+                    setPatternButtonsState(false);
+                    updateQueueStatus('Queue executing...');
+                    if (data['queue-status']) {
+                        parseAndDisplayQueueStatus(data['queue-status']);
+                    }
+                } else if (data['queue-cleared']) {
+                    updateQueueStatus('Queue cleared');
+                    clearQueueDisplay();
+                } else if (data['queue-status']) {
+                    parseAndDisplayQueueStatus(data['queue-status']);
+                } else if (data['queue-progress']) {
+                    updatePatternStatus(`Queue: ${data['queue-progress'].pattern} (${data['queue-progress'].current}/${data['queue-progress'].total})`);
+                    updateQueueProgress(data['queue-progress']);
+                } else if (data.error) {
+                    updatePatternStatus('Error: ' + data.error);
+                }
+            } catch (e) {
+                // Ignore non-JSON queue messages
             }
         };
         socket.onclose = (event) => {
@@ -669,12 +863,54 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         // Add click handlers for pattern buttons
         Object.entries(patternButtons).forEach(([buttonId, command]) => {
             const button = document.getElementById(buttonId);
-            button.onclick = () => {
-                socket.send(JSON.stringify({ type: command }));
-                updatePatternStatus(`${button.textContent} pattern started...`);
-                setPatternButtonsState(false);
+            button.onclick = (event) => {
+                if (queueMode || event.shiftKey) {
+                    // Queue mode or Shift+click to add to queue
+                    const message = JSON.stringify({ type: 'add-to-queue', pattern: command });
+                    console.log("Sending queue message:", message);
+                    socket.send(message);
+                    updatePatternStatus(`${button.textContent} added to queue`);
+                } else {
+                    // Normal click to execute immediately
+                    const message = JSON.stringify({ type: command });
+                    console.log("Sending execute message:", message);
+                    socket.send(message);
+                    updatePatternStatus(`${button.textContent} pattern started...`);
+                    setPatternButtonsState(false);
+                }
             };
         });
+
+        // Queue mode toggle button handler
+        const queueModeBtn = document.getElementById('queue-mode-btn');
+        queueModeBtn.onclick = () => {
+            queueMode = !queueMode;
+            updateQueueModeButton();
+        };
+
+        function updateQueueModeButton() {
+            const queueModeBtn = document.getElementById('queue-mode-btn');
+            if (queueMode) {
+                queueModeBtn.textContent = 'Queue Mode: ON';
+                queueModeBtn.classList.add('active');
+                queueModeBtn.title = 'Click to switch to Execute Mode';
+            } else {
+                queueModeBtn.textContent = 'Queue Mode: OFF';
+                queueModeBtn.classList.remove('active');
+                queueModeBtn.title = 'Click to switch to Queue Mode';
+            }
+        }
+
+        // Queue button handlers
+        const executeQueueBtn = document.getElementById('execute-queue-btn');
+        executeQueueBtn.onclick = () => {
+            socket.send(JSON.stringify({ type: 'execute-queue' }));
+        };
+
+        const clearQueueBtn = document.getElementById('clear-queue-btn');
+        clearQueueBtn.onclick = () => {
+            socket.send(JSON.stringify({ type: 'clear-queue' }));
+        };
 
         // Stop button
         const stopBtn = document.getElementById('stop-btn');
@@ -694,6 +930,109 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
                 document.getElementById(buttonId).disabled = !enabled;
             });
             document.getElementById('stop-btn').disabled = enabled;
+        }
+
+        // Queue management functions
+        function updateQueueStatus(message) {
+            document.getElementById('queue-status').textContent = message;
+        }
+
+        function updateQueueDisplay() {
+            // Request current queue status
+            socket.send(JSON.stringify({ type: 'get-queue-status' }));
+        }
+
+        function clearQueueDisplay() {
+            const queueList = document.getElementById('queue-list');
+            queueList.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">Queue is empty</div>';
+            document.getElementById('execute-queue-btn').disabled = true;
+        }
+
+        function updateQueueProgress(progress) {
+            const queueList = document.getElementById('queue-list');
+            const items = queueList.querySelectorAll('.queue-item');
+            
+            // Remove executing class from all items
+            items.forEach(item => item.classList.remove('executing'));
+            
+            // Add executing class to current item
+            if (items[progress.current - 1]) {
+                items[progress.current - 1].classList.add('executing');
+            }
+        }
+
+        function displayQueueItems(patterns) {
+            const queueList = document.getElementById('queue-list');
+            
+            if (patterns.length === 0) {
+                clearQueueDisplay();
+                return;
+            }
+            
+            queueList.innerHTML = '';
+            patterns.forEach((pattern, index) => {
+                const item = document.createElement('div');
+                item.className = 'queue-item';
+                
+                // Format pattern name nicely
+                let displayName = pattern;
+                if (pattern.endsWith('-pattern')) {
+                    displayName = pattern.replace('-pattern', '');
+                }
+                // Convert camelCase to Title Case
+                displayName = displayName.replace(/([a-z])([A-Z])/g, '$1 $2');
+                // Capitalize first letter
+                displayName = displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                
+                item.innerHTML = `
+                    <span class="queue-item-name">${index + 1}. ${displayName}</span>
+                `;
+                queueList.appendChild(item);
+            });
+            
+            document.getElementById('execute-queue-btn').disabled = false;
+        }
+        
+        function parseAndDisplayQueueStatus(statusString) {
+            console.log("Parsing queue status:", statusString);
+            
+            // Handle empty queue case
+            if (statusString === 'empty') {
+                updateQueueStatus('Queue is empty');
+                clearQueueDisplay();
+                return;
+            }
+            
+            // Parse JSON object if it's a string, or use directly if it's already an object
+            let statusObj;
+            if (typeof statusString === 'string') {
+                try {
+                    statusObj = JSON.parse(statusString);
+                } catch (e) {
+                    console.error("Failed to parse status JSON:", e);
+                    return;
+                }
+            } else {
+                statusObj = statusString;
+            }
+            
+            console.log("Status object:", statusObj);
+            
+            if (statusObj) {
+                const size = statusObj.size || 0;
+                let statusText = `Queue has ${size} pattern${size !== 1 ? 's' : ''}`;
+                
+                if (statusObj.executing) {
+                    statusText += ` (executing ${statusObj.executing})`;
+                }
+                
+                updateQueueStatus(statusText);
+                
+                if (statusObj.patterns && Array.isArray(statusObj.patterns)) {
+                    console.log("Patterns array:", statusObj.patterns);
+                    displayQueueItems(statusObj.patterns);
+                }
+            }
         }
 
         // Corner order: Top-Left, Top-Right, Bottom-Right, Bottom-Left
@@ -895,6 +1234,19 @@ const char index_html[] PROGMEM = R"rawliteral(<!DOCTYPE html>
         setPatternButtonsState(true); // Enable pattern buttons initially
         updateLaserButton(); // Initialize laser button state
         
+        // Initialize queue display
+        clearQueueDisplay();
+        
+        // Initialize queue mode button
+        updateQueueModeButton();
+        
+        // Add help text for queue functionality
+        const queueControls = document.querySelector('.queue-controls');
+        const helpText = document.createElement('div');
+        helpText.style.cssText = 'text-align: center; font-size: 0.8rem; color: #666; margin-top: 0.5rem; font-style: italic;';
+        helpText.innerHTML = 'Tip: Toggle Queue Mode to add patterns to queue instead of executing immediately';
+        queueControls.appendChild(helpText);
+
         // Tab switching functionality
         document.querySelectorAll('.tab-button').forEach(button => {
             button.addEventListener('click', (e) => {

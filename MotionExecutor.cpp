@@ -11,9 +11,6 @@ unsigned long millis() {
 }
 #endif
 
-// Define static const member
-const int MotionExecutor::MAX_QUEUE_SIZE;
-
 MotionExecutor::MotionExecutor(ServoController& controller) 
     : servoController(controller), queueHead(0), queueTail(0), queueSize(0),
       commandStartTime(0), executing(false) {

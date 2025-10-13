@@ -1,7 +1,5 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
-
-// Include source files directly for testing
 #include "../PatternGenerator.h"
 
 TEST_CASE("ZigzagPattern basic functionality") {

@@ -12,6 +12,7 @@ BASIC_SOURCES = test_basic.cpp
 GEOMETRY_SOURCES = ../Geometry.cpp test_geometry.cpp
 PATTERN_SOURCES = ../Geometry.cpp ../PatternGenerator.cpp test_patterns.cpp  
 MOTION_SOURCES = ../Geometry.cpp ../MotionPlanner.cpp ../MotionExecutor.cpp test_motion_system.cpp
+MOTION_SOURCES_TOO = ../Geometry.cpp ../MotionPlanner.cpp ../PatternGenerator.cpp test_motion_system.cpp
 
 # Test executables
 BASIC_TEST = test_basic
@@ -32,8 +33,8 @@ $(GEOMETRY_TEST): $(GEOMETRY_SOURCES) doctest.h
 $(PATTERN_TEST): $(PATTERN_SOURCES) doctest.h
 	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(PATTERN_SOURCES) $(LDFLAGS)
 
-$(MOTION_TEST): $(MOTION_SOURCES) doctest.h MockServoController.h
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(MOTION_SOURCES) $(LDFLAGS)
+$(MOTION_TEST): test_motion_system.cpp MockServoController.h doctest.h
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -o $@ $(MOTION_SOURCES_TOO) $(LDFLAGS)
 
 # Run all tests
 test: all

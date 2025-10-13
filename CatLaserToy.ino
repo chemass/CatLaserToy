@@ -34,6 +34,7 @@ MotionExecutor motionExecutor(servoController);
 // Define pins for button (servo pins now handled by ServoController)
 const int buttonPin = 18; // Main button pin
 const int ledPin = 2;     // ESP32 internal LED
+const int pirPin = 19;    // HC-SR501 PIR motion sensor pin
 
 // Create button objects
 Button mainButton(buttonPin);
@@ -52,7 +53,19 @@ int yMin = 0, yMax = 180;
 int currentX = 90; // Start at midpoint
 int currentY = 90; // Start at midpoint
 
-bool isZigging = false;
+bool patternActive = false;
+
+// Pattern queue system
+struct QueuedPattern {
+    String patternType;
+    bool isValid;
+};
+
+const int MAX_QUEUE_SIZE = 10;
+QueuedPattern patternQueue[MAX_QUEUE_SIZE];
+int queueSize = 0;
+int currentQueueIndex = 0;
+bool queueActive = false;
 
 // Point storage
 Point storedPoints[StorageManager::MAX_POINTS];
@@ -75,6 +88,9 @@ void setup() {
     // Set LED pin
     pinMode(ledPin, OUTPUT);
     digitalWrite(ledPin, LOW);    // LED off by default
+    
+    // Setup PIR sensor
+    pinMode(pirPin, INPUT);
     
     // Load stored points from EEPROM
     if (!storage.loadPoints(storedPoints)) {
@@ -140,6 +156,14 @@ void performSpiralPattern();
 void performRandomPattern();
 void performFigure8Pattern();
 void performPerimeterPattern();
+
+// Pattern queue management functions
+bool addPatternToQueue(const String& patternType);
+void clearPatternQueue();
+void executeNextQueuedPattern();
+void startQueueExecution();
+String getQueueStatus();
+PatternGenerator* createPattern(const String& patternType);
 
 // Helper function to enable laser before movement if not already enabled
 void enableLaserForMovement() {
@@ -324,10 +348,69 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                         return;
                     } else if (typeVal == "stop-motion") {
                         motionExecutor.stop();
+                        patternActive = false; // Reset pattern tracking flag
                         client->text("{\"motionStopped\":true}");
                         return;
                     } else if (typeVal == "get-position") {
                         sendCurrentPosition(client);
+                        return;
+                    }
+
+                    // Pattern queue commands
+                    if (typeVal == "add-to-queue") {
+                        Serial.println("Received add-to-queue command");
+                        // Parse pattern type from message: {"type":"add-to-queue","pattern":"zigzag-pattern"}
+                        int patternIdx = msg.indexOf("\"pattern\"");
+                        if (patternIdx >= 0) {
+                            int colonIdx = msg.indexOf(":", patternIdx);
+                            int quote1 = msg.indexOf('"', colonIdx);
+                            int quote2 = msg.indexOf('"', quote1 + 1);
+                            String patternType = msg.substring(quote1 + 1, quote2);
+                            Serial.println("Parsed pattern type: " + patternType);
+                            
+                            bool boundaryReady = storage.loadPoints(storedPoints);
+                            if (!boundaryReady) {
+                                Serial.println("Boundary not configured");
+                                client->text("{\"error\":\"Boundary not configured\"}");
+                                return;
+                            }
+                            
+                            if (addPatternToQueue(patternType)) {
+                                String response = "{\"queue-added\":\"" + patternType + "\",\"queue-status\":{" + getQueueStatus() + "}}";
+                                Serial.println("Sending response: " + response);
+                                client->text(response);
+                            } else {
+                                Serial.println("Failed to add pattern to queue");
+                                client->text("{\"error\":\"Queue is full or invalid pattern\"}");
+                            }
+                        } else {
+                            Serial.println("Pattern type not found in message");
+                            client->text("{\"error\":\"Pattern type not specified\"}");
+                        }
+                        return;
+                    } else if (typeVal == "execute-queue") {
+                        bool boundaryReady = storage.loadPoints(storedPoints);
+                        if (!boundaryReady) {
+                            client->text("{\"error\":\"Boundary not configured\"}");
+                            return;
+                        }
+                        if (queueSize == 0) {
+                            client->text("{\"error\":\"Queue is empty\"}");
+                            return;
+                        }
+                        if (motionExecutor.isBusy() || patternActive || queueActive) {
+                            client->text("{\"error\":\"Pattern or queue already running\"}");
+                            return;
+                        }
+                        startQueueExecution();
+                        client->text("{\"queue-started\":true,\"queue-status\":\"" + getQueueStatus() + "\"}");
+                        return;
+                    } else if (typeVal == "clear-queue") {
+                        clearPatternQueue();
+                        client->text("{\"queue-cleared\":true,\"queue-status\":\"" + getQueueStatus() + "\"}");
+                        return;
+                    } else if (typeVal == "get-queue-status") {
+                        client->text("{\"queue-status\":\"" + getQueueStatus() + "\"}");
                         return;
                     }
 
@@ -357,6 +440,8 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                             pattern = new PerimeterPattern(80);
                         } else if (typeVal == "stop-pattern") {
                             motionExecutor.stop();
+                            patternActive = false; // Reset pattern tracking flag
+                            queueActive = false; // Stop queue execution
                             client->text("{\"pattern-stopped\":true}");
                             return;
                         }
@@ -372,6 +457,7 @@ void onWsEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                             Quadrilateral quad(storedPoints);
                             int cmdCount = motionPlanner.executePattern(*pattern, quad, commands, 200, config);
                             motionExecutor.queueCommands(commands, cmdCount);
+                            patternActive = true; // Set flag to track pattern execution
                             client->text("{\"pattern-started\":\"" + typeVal + "\"}");
                             delete pattern;
                             return;
@@ -441,15 +527,88 @@ void notifySetupMode(AsyncWebSocketClient *client) {
     Serial.println(laserActive ? "true" : "false");
 }
 
+// Variables for PIR sensor state management
+bool lastPirState = false;
+unsigned long lastPirChangeTime = 0;
+bool queueCompletedWithPirStillActive = false;
+
 void loop() {
     // Execute any queued motion commands
     motionExecutor.executeNext();
 
+    // Check PIR motion sensor state
+    bool pirState = digitalRead(pirPin) == HIGH;
+    
+    // Check if PIR sensor has detected motion and we're not already running a queue
+    if (pirState && !queueActive && !patternActive) {
+        // Motion detected and we're not already running a pattern
+        
+        if (queueSize > 0) {
+            // We have patterns in the queue
+            Serial.println("PIR motion detected - starting queue");
+            
+            // Enable laser for movement
+            enableLaserForMovement();
+            
+            // Start queue execution
+            startQueueExecution();
+        } else {
+            // No patterns in queue - default to random walk
+            Serial.println("PIR motion detected with empty queue - starting default random walk");
+            
+            // Enable laser for movement
+            enableLaserForMovement();
+            
+            // Start random walk pattern
+            performRandomPattern();
+        }
+        
+        // Reset flag for next run
+        queueCompletedWithPirStillActive = false;
+    }
+    
+    // Track when PIR state changes for debugging
+    if (pirState != lastPirState) {
+        Serial.println(pirState ? "PIR: Motion detected" : "PIR: Motion ended");
+        lastPirState = pirState;
+        lastPirChangeTime = millis();
+    }
+    
     // Check if pattern has completed
-    if (isZigging && !motionExecutor.isBusy()) {
-        isZigging = false;
-        ws.textAll("pattern-complete");
-        Serial.println("Pattern completed.");
+    if (patternActive && !motionExecutor.isBusy()) {
+        patternActive = false;
+        
+        if (queueActive) {
+            // If we're executing a queue, try to start the next pattern
+            executeNextQueuedPattern();
+        } else {
+            // Single pattern completed
+            ws.textAll("pattern-complete");
+            Serial.println("Pattern completed.");
+            
+            // Check if PIR is still active for auto-replay of single pattern
+            if (digitalRead(pirPin) == HIGH) {
+                queueCompletedWithPirStillActive = true;
+                Serial.println("PIR still active after pattern completion - will auto-replay");
+            }
+        }
+    }
+    
+    // Check if queue just completed but PIR is still HIGH
+    if (!queueActive && !patternActive && !motionExecutor.isBusy() && 
+        pirState && queueCompletedWithPirStillActive) {
+        
+        if (queueSize > 0) {
+            // Restart queue if PIR is still detecting motion
+            Serial.println("Queue completed but motion still detected - replaying queue");
+            startQueueExecution();
+        } else {
+            // No queue - restart random walk pattern
+            Serial.println("Pattern completed but motion still detected - starting new random walk");
+            performRandomPattern();
+        }
+        
+        queueCompletedWithPirStillActive = false;
     }
 
     // Handle LED blinking for point storage mode
@@ -540,7 +699,7 @@ void performZigzagPattern() {
     // Execute the sequence
     motionExecutor.queueCommands(commands, commandCount);
     
-    isZigging = true; // Set flag to indicate zigzag pattern is being performed
+    patternActive = true; // Set flag to indicate zigzag pattern is being performed
     Serial.print("Zigzag pattern queued with ");
     Serial.print(commandCount);
     Serial.println(" commands.");
@@ -567,7 +726,7 @@ void performSpiralPattern() {
     
     motionExecutor.queueCommands(commands, pointCount);
     
-    isZigging = true;
+    patternActive = true;
     Serial.print("Spiral pattern queued with ");
     Serial.print(pointCount);
     Serial.println(" commands.");
@@ -594,7 +753,7 @@ void performRandomPattern() {
     
     motionExecutor.queueCommands(commands, pointCount);
     
-    isZigging = true;
+    patternActive = true;
     Serial.print("Random walk pattern queued with ");
     Serial.print(pointCount);
     Serial.println(" commands.");
@@ -621,7 +780,7 @@ void performFigure8Pattern() {
     
     motionExecutor.queueCommands(commands, pointCount);
     
-    isZigging = true;
+    patternActive = true;
     Serial.print("Figure-8 pattern queued with ");
     Serial.print(pointCount);
     Serial.println(" commands.");
@@ -648,8 +807,146 @@ void performPerimeterPattern() {
     
     motionExecutor.queueCommands(commands, pointCount);
     
-    isZigging = true;
+    patternActive = true;
     Serial.print("Perimeter pattern queued with ");
     Serial.print(pointCount);
     Serial.println(" commands.");
+}
+
+// Pattern queue management functions implementation
+bool addPatternToQueue(const String& patternType) {
+    if (queueSize >= MAX_QUEUE_SIZE) {
+        return false; // Queue is full
+    }
+    
+    // Validate pattern type
+    if (patternType != "zigzag-pattern" && 
+        patternType != "spiral-pattern" && 
+        patternType != "random-pattern" && 
+        patternType != "figure8-pattern" && 
+        patternType != "perimeter-pattern") {
+        return false; // Invalid pattern type
+    }
+    
+    patternQueue[queueSize].patternType = patternType;
+    patternQueue[queueSize].isValid = true;
+    queueSize++;
+    
+    Serial.println("Added " + patternType + " to queue. Queue size: " + String(queueSize));
+    return true;
+}
+
+void clearPatternQueue() {
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+        patternQueue[i].isValid = false;
+        patternQueue[i].patternType = "";
+    }
+    queueSize = 0;
+    currentQueueIndex = 0;
+    queueActive = false;
+    Serial.println("Pattern queue cleared.");
+}
+
+void startQueueExecution() {
+    if (queueSize == 0) {
+        return;
+    }
+    
+    queueActive = true;
+    currentQueueIndex = 0;
+    Serial.println("Starting queue execution with " + String(queueSize) + " patterns.");
+    
+    // Start the first pattern
+    executeNextQueuedPattern();
+}
+
+void executeNextQueuedPattern() {
+    if (!queueActive || currentQueueIndex >= queueSize) {
+        // Queue execution complete
+        queueActive = false;
+        // Reset index but don't clear the queue so it can be run again
+        currentQueueIndex = 0;
+        ws.textAll("queue-complete");
+        Serial.println("Queue execution completed. Queue preserved for replay.");
+        
+        // Check if PIR is still active to flag for auto-replay
+        if (digitalRead(pirPin) == HIGH) {
+            queueCompletedWithPirStillActive = true;
+            Serial.println("PIR still active after queue completion - will auto-replay");
+        }
+        return;
+    }
+    
+    if (!patternQueue[currentQueueIndex].isValid) {
+        // Skip invalid pattern and try next
+        currentQueueIndex++;
+        executeNextQueuedPattern();
+        return;
+    }
+    
+    String patternType = patternQueue[currentQueueIndex].patternType;
+    Serial.println("Executing pattern " + String(currentQueueIndex + 1) + "/" + String(queueSize) + ": " + patternType);
+    
+    // Create and execute the pattern
+    PatternGenerator* pattern = createPattern(patternType);
+    if (pattern) {
+        enableLaserForMovement();
+        
+        MotionCommand commands[200];
+        MotionConfig config;
+        config.pointDuration_ms = 50;
+        config.laserEnabled = true;
+        config.returnToCenter = false;
+        Quadrilateral quad(storedPoints);
+        int cmdCount = motionPlanner.executePattern(*pattern, quad, commands, 200, config);
+        motionExecutor.queueCommands(commands, cmdCount);
+        patternActive = true;
+        
+        // Notify clients of progress
+        ws.textAll("{\"queue-progress\":{\"current\":" + String(currentQueueIndex + 1) + 
+                   ",\"total\":" + String(queueSize) + 
+                   ",\"pattern\":\"" + patternType + "\"}}");
+        
+        delete pattern;
+        currentQueueIndex++;
+    } else {
+        // Pattern creation failed, skip to next
+        currentQueueIndex++;
+        executeNextQueuedPattern();
+    }
+}
+
+String getQueueStatus() {
+    if (queueSize == 0) {
+        return "empty";
+    }
+    
+    String status = "\"size\":" + String(queueSize);
+    if (queueActive) {
+        status += ",\"executing\":\"" + String(currentQueueIndex) + "/" + String(queueSize) + "\"";
+    }
+
+    status += ",\"patterns\":[";
+    for (int i = 0; i < queueSize; i++) {
+        if (i > 0) status += ",";
+        status += "\"" + patternQueue[i].patternType + "\"";
+    }
+    status += "]";
+    
+    return status;
+}
+
+PatternGenerator* createPattern(const String& patternType) {
+    if (patternType == "zigzag-pattern") {
+        return new ZigzagPattern(8, 10);
+    } else if (patternType == "spiral-pattern") {
+        return new SpiralPattern(0.45f, 80, 1.0f);
+    } else if (patternType == "random-pattern") {
+        return new RandomWalkPattern(80, 0.08f);
+    } else if (patternType == "figure8-pattern") {
+        return new Figure8Pattern(80, 0.4f);
+    } else if (patternType == "perimeter-pattern") {
+        return new PerimeterPattern(80);
+    }
+    return nullptr;
 }
